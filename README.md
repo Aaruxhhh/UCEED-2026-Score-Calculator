@@ -6,7 +6,7 @@ If you've checked your response sheet, you probably noticed that the question or
 
 Website Link
 
-https://ruxh-coco.github.io/UCEED-2026-Score-Calculator/
+https://aaruxhhh.github.io/UCEED-2026-Score-Calculator/
 
 Why I made this
 
