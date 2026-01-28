@@ -9,33 +9,85 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .custom-scrollbar::-webkit-scrollbar {
-            height: 8px;
-            width: 8px;
+        body { font-family: 'Plus Jakarta Sans', sans-serif; scroll-behavior: smooth; }
+        
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.02); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
+        
+        .animate-fade-in { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        .animate-scale-in { animation: scaleIn 0.2s ease-out forwards; }
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #d4d4d4;
-            border-radius: 4px;
+
+        /* Glass / Monochrome Panel Styles */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #a3a3a3;
+        
+        .glass-input {
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(0, 0, 0, 0.2);
+            box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Subtle Gradient Background */
+        .bg-mono-mesh {
+            background-color: #fafafa;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(0,0%,90%,1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, hsla(0,0%,92%,1) 0px, transparent 50%);
+        }
+
+        /* Tooltip Animation */
+        .tooltip-content {
+            visibility: hidden;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        /* Only show when hovering the TRIGGER element specifically */
+        .tooltip-trigger:hover .tooltip-content,
+        .tooltip-trigger:active .tooltip-content,
+        .tooltip-trigger:focus .tooltip-content {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
         }
     </style>
 </head>
-<body class="bg-neutral-50 text-neutral-900 selection:bg-neutral-200">
+<body class="bg-mono-mesh text-neutral-900 selection:bg-neutral-200 min-h-screen relative overflow-x-hidden">
+    
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
+        // --- ICONS ---
         const Calculator = (props) => (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
         );
@@ -54,63 +106,81 @@
         const AlertCircle = (props) => (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
         );
-        const BarChart3 = (props) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+        const Check = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="20 6 9 17 4 12"/></svg>
+        );
+        const X = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        );
+        const Info = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        );
+        const Pencil = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+        );
+        const AlertTriangle = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
         );
 
-        const SECTION_CONFIG = {
-            NAT: { start: 1, end: 14, correct: 4, wrong: 0, partial: false },
-            MSQ: { start: 15, end: 29, correct: 4, wrong: -1, partial: true },
-            MCQ: { start: 30, end: 57, correct: 3, wrong: -0.71, partial: false },
+        // --- CONSTANTS ---
+        const OFFICIAL_ANSWER_KEY = {
+            "1": "14", "2": "2", "3": "6", "4": "16", "5": "62", "6": "4", "7": "31", "8": "8", "9": "13", "10": "745", 
+            "11": "5", "12": "16.8", "13": "34", "14": "470-480",
+            "15": ["A", "B", "C"], "16": ["B", "C"], "17": ["A", "B", "D"], 
+            "18": [["B", "C"], ["B", "C", "D"]],
+            "19": ["A", "C"], "20": ["A", "D"], "21": ["A", "B", "C", "D"], "22": ["A", "B", "C"], "23": ["B", "C", "D"], "24": ["B", "D"], "25": ["A", "C"], "26": ["A", "B", "C"], "27": ["A", "B", "C"], "28": ["A", "D"], "29": ["B", "C"],
+            "30": "A", "31": "B", "32": "C", "33": "B", "34": "D", "35": "A", "36": "C", "37": "B", "38": "B", "39": "D", "40": "C", "41": "C", "42": "C", "43": "D", "44": "B", "45": "C", "46": "B", "47": "C", "48": "C", "49": "C", "50": "B", "51": "B", "52": "A", "53": "D", "54": "B", "55": "D", "56": "B", "57": "A"
         };
 
         function App() {
             const [activeTab, setActiveTab] = useState('step1');
-            
             const [userJsonInput, setUserJsonInput] = useState('');
-            const [keyJsonInput, setKeyJsonInput] = useState('');
+            const [questionsMap, setQuestionsMap] = useState(null); 
             const [scoreData, setScoreData] = useState(null);
             const [error, setError] = useState(null);
+            const [editingQuestion, setEditingQuestion] = useState(null); 
 
-            const extractionPrompt = `I need you to process my UCEED exam data. I have attached my "Response Sheet" (PDF), the "Official Question Paper" (PDF), and the "Official Answer Key" (PDF).
+            const extractionPrompt = `I need you to perform a high-precision data extraction task for UCEED 2026. This requires careful, step-by-step visual mapping because the files are shuffled.
 
-Please perform the following tasks:
+**YOUR GOAL:**
+Create a JSON object mapping the **Official Question Number** (from the Official Paper) to the **User's Answer** (from the Response Sheet).
 
-1.  **Mapping:** Map the questions from my Response Sheet (which are shuffled) to the corresponding Question Numbers (Q1 to Q57) in the Official Question Paper.
-2.  **Extraction:** For each question (1 to 57), extract:
-    * \`question_number\`: The official question number (e.g., "1", "35").
-    * \`type\`: The section type (NAT, MSQ, or MCQ).
-    * \`user_answer\`: My answer given in the response sheet. 
-        * For NAT: Just the number (e.g., "24").
-        * For MSQ: An array of sorted letters (e.g., ["A", "C"]).
-        * For MCQ: A single letter (e.g., "B").
-        * If unattempted, use null.
-    * \`correct_answer\`: The correct answer from the Official Answer Key.
-        * Use the same format as above.
-3.  **Exclusions:** Ignore Part B (Questions 58 and 59).
-4.  **Output:** Return ONLY a valid, raw JSON object indexed by the official question number. Do not include markdown code blocks.
+**FILES TO ANALYZE:**
+1.  **Response Sheet (File 1):** Contains the user's answers. *CRITICAL:* The questions here are in a RANDOM shuffled order. The "Question ID" shown here is meaningless for ordering.
+2.  **Official Question Paper (File 2):** Contains the correct order (Q1 to Q57) and the actual text/images of each question.
 
-Format Example:
+**STEP-BY-STEP INSTRUCTIONS:**
+Please take your time and follow this process for every single question (1 to 57):
+
+1.  **Look at Question 1** in the **Official Question Paper**. Note its text and images.
+2.  **Search** the entire **Response Sheet** to find the question that **visually matches** Question 1.
+    * *Note:* It might be at the very end of the PDF. Do not rely on text matching alone; compare the images carefully.
+3.  **Extract** the user's chosen answer for that specific question.
+4.  **Repeat** this process for all 57 questions.
+
+**EXTRACTION FORMAT:**
+* **NAT (Q1-14):** Extract the numerical value entered.
+* **MSQ (Q15-29):** Extract the selected options as an array of uppercase letters (e.g., ["A", "C"]).
+* **MCQ (Q30-57):** Extract the single selected option as a string (e.g., "B").
+* **Unattempted:** If the status is "Not Answered", set \`user_answer\` to \`null\`.
+
+**OUTPUT REQUIREMENTS:**
+* Output **ONLY** a valid, raw JSON object.
+* The keys must be the **Official Question Numbers** (strings "1" to "57").
+* Do not include any markdown, code blocks (\`\`\`json), or explanations. Just the raw JSON string.
+
+**JSON STRUCTURE:**
 {
-  "1": { "type": "NAT", "user_answer": "45", "correct_answer": "45" },
-  "15": { "type": "MSQ", "user_answer": ["A", "B"], "correct_answer": ["A", "B", "D"] },
-  "30": { "type": "MCQ", "user_answer": "C", "correct_answer": "A" }
+  "1": { "type": "NAT", "user_answer": "14" },
+  "2": { "type": "NAT", "user_answer": "25.5" },
+  ...
+  "15": { "type": "MSQ", "user_answer": ["A", "B", "D"] },
+  ...
+  "30": { "type": "MCQ", "user_answer": "C" }
 }`;
 
-            const keyOnlyPrompt = `I have attached the "Official Answer Key" (PDF) and "Official Question Paper" (PDF).
-
-Please extract the correct answers for Questions 1 to 57 and output a JSON object indexed by the question number.
-
-Format:
-{
-  "1": { "correct_answer": "45" },
-  "15": { "correct_answer": ["A", "B", "D"] },
-  "30": { "correct_answer": "A" }
-}
-
-Output ONLY valid raw JSON.`;
-
-            const calculateScore = () => {
+            // Initialize Data
+            const handleInitialCalculation = () => {
                 setError(null);
                 try {
                     if (!userJsonInput.trim()) {
@@ -125,139 +195,182 @@ Output ONLY valid raw JSON.`;
                         throw new Error("Invalid User JSON format. Please check the text.");
                     }
 
-                    let keyData = {};
-                    if (keyJsonInput.trim()) {
-                        try {
-                            const cleanKey = keyJsonInput.replace(/```json/g, '').replace(/```/g, '');
-                            keyData = JSON.parse(cleanKey);
-                        } catch (e) {
-                            throw new Error("Invalid Answer Key JSON format.");
-                        }
-                    }
-
-                    const mergedData = {};
+                    const initialMap = {};
                     
                     for (let i = 1; i <= 57; i++) {
                         const qId = i.toString();
                         const userQ = userData[qId] || {};
-                        const keyQ = keyData[qId] || {};
-
+                        
                         let type = userQ.type;
                         if (!type) {
                             if (i >= 1 && i <= 14) type = 'NAT';
                             else if (i >= 15 && i <= 29) type = 'MSQ';
                             else if (i >= 30 && i <= 57) type = 'MCQ';
                         }
+                        
+                        const finalCorrect = OFFICIAL_ANSWER_KEY[qId];
 
-                        mergedData[qId] = {
+                        initialMap[qId] = {
                             id: qId,
                             type: type,
                             user_answer: userQ.user_answer,
-                            correct_answer: keyQ.correct_answer || userQ.correct_answer, 
+                            correct_answer: finalCorrect, 
                         };
                     }
+                    
+                    setQuestionsMap(initialMap);
+                    
+                } catch (err) {
+                    setError(err.message);
+                }
+            };
 
-                    let totalScore = 0;
-                    const sections = {
-                        NAT: { attempted: 0, correct: 0, score: 0, total: 56 },
-                        MSQ: { attempted: 0, correct: 0, score: 0, total: 60 },
-                        MCQ: { attempted: 0, correct: 0, score: 0, total: 84 },
-                    };
+            // Recalculate whenever questionsMap changes
+            useEffect(() => {
+                if (!questionsMap) return;
+                calculateStats(questionsMap);
+            }, [questionsMap]);
 
-                    const detailedResults = [];
+            const calculateStats = (dataMap) => {
+                let totalScore = 0;
+                const sections = {
+                    NAT: { attempted: 0, correct: 0, score: 0, total: 56 },
+                    MSQ: { attempted: 0, correct: 0, score: 0, total: 60 },
+                    MCQ: { attempted: 0, correct: 0, score: 0, total: 84 },
+                };
 
-                    Object.values(mergedData).forEach(q => {
-                        if (!q.type) return;
+                const detailedResults = [];
+
+                Object.values(dataMap).forEach(q => {
+                    if (!q.type) return;
+                    
+                    const qNum = parseInt(q.id);
+                    let marks = 0;
+                    let status = 'unattempted'; 
+
+                    const userAns = q.user_answer;
+                    const correctAns = q.correct_answer;
+
+                    if (userAns === null || userAns === undefined || userAns === '') {
+                        status = 'unattempted';
+                        marks = 0;
+                    } else if (!correctAns) {
+                        status = 'unknown';
+                        marks = 0;
+                    } else {
+                        sections[q.type].attempted++;
                         
-                        const qNum = parseInt(q.id);
-                        let marks = 0;
-                        let status = 'unattempted'; 
-
-                        const userAns = q.user_answer;
-                        const correctAns = q.correct_answer;
-
-                        if (userAns === null || userAns === undefined || userAns === '') {
-                            status = 'unattempted';
-                            marks = 0;
-                        } else if (!correctAns) {
-                            status = 'unknown';
-                            marks = 0;
-                        } else {
-                            sections[q.type].attempted++;
+                        if (q.type === 'NAT') {
+                            const uVal = parseFloat(userAns);
+                            let isMatch = false;
                             
-                            if (q.type === 'NAT') {
-                                const uVal = parseFloat(userAns);
+                            if (typeof correctAns === 'string' && correctAns.includes('-')) {
+                                const [min, max] = correctAns.split('-').map(Number);
+                                    if (!isNaN(min) && !isNaN(max)) {
+                                        isMatch = uVal >= min && uVal <= max;
+                                    }
+                            } else {
                                 const cVal = parseFloat(correctAns);
-                                const isMatch = uVal === cVal || userAns.toString().trim() === correctAns.toString().trim();
-                                
-                                if (isMatch) {
-                                    marks = 4;
-                                    status = 'correct';
-                                    sections[q.type].correct++;
-                                } else {
-                                    marks = 0;
-                                    status = 'wrong';
-                                }
-                            } 
-                            else if (q.type === 'MCQ') {
-                                if (userAns === correctAns) {
-                                    marks = 3;
-                                    status = 'correct';
-                                    sections[q.type].correct++;
-                                } else {
-                                    marks = -0.71;
-                                    status = 'wrong';
-                                }
-                            } 
-                            else if (q.type === 'MSQ') {
-                                const uArr = Array.isArray(userAns) ? userAns : [userAns];
-                                const cArr = Array.isArray(correctAns) ? correctAns : [correctAns];
+                                isMatch = uVal === cVal || userAns.toString().trim() === correctAns.toString().trim();
+                            }
+                            
+                            if (isMatch) {
+                                marks = 4;
+                                status = 'correct';
+                                sections[q.type].correct++;
+                            } else {
+                                marks = 0;
+                                status = 'wrong';
+                            }
+                        } 
+                        else if (q.type === 'MCQ') {
+                            if (userAns === correctAns) {
+                                marks = 3;
+                                status = 'correct';
+                                sections[q.type].correct++;
+                            } else {
+                                marks = -0.71;
+                                status = 'wrong';
+                            }
+                        } 
+                        else if (q.type === 'MSQ') {
+                            const uArr = Array.isArray(userAns) ? userAns : [userAns];
+                            
+                            let possibleKeys = [];
+                            if (Array.isArray(correctAns) && Array.isArray(correctAns[0])) {
+                                possibleKeys = correctAns;
+                            } else {
+                                possibleKeys = [Array.isArray(correctAns) ? correctAns : [correctAns]];
+                            }
+
+                            let bestScenarioMarks = -100;
+                            let bestScenarioStatus = 'wrong';
+
+                            for (const cArr of possibleKeys) {
+                                let currentMarks = 0;
+                                let currentStatus = 'wrong';
 
                                 const hasWrongOption = uArr.some(opt => !cArr.includes(opt));
                                 
                                 if (hasWrongOption) {
-                                    marks = -1;
-                                    status = 'wrong';
+                                    currentMarks = -1;
+                                    currentStatus = 'wrong';
                                 } else {
                                     const correctSelectedCount = uArr.length;
                                     const totalCorrectOptions = cArr.length;
 
                                     if (correctSelectedCount === totalCorrectOptions) {
-                                        marks = 4;
-                                        status = 'correct';
-                                        sections[q.type].correct++;
+                                        currentMarks = 4;
+                                        currentStatus = 'correct';
                                     } else {
-                                        status = 'partial';
-                                        if (totalCorrectOptions === 4 && correctSelectedCount === 3) marks = 3;
-                                        else if (totalCorrectOptions >= 3 && correctSelectedCount === 2) marks = 2;
-                                        else if (totalCorrectOptions >= 2 && correctSelectedCount === 1) marks = 1;
-                                        else marks = 0; 
+                                        currentStatus = 'partial';
+                                        if (totalCorrectOptions === 4 && correctSelectedCount === 3) currentMarks = 3;
+                                        else if (totalCorrectOptions >= 3 && correctSelectedCount === 2) currentMarks = 2;
+                                        else if (totalCorrectOptions >= 2 && correctSelectedCount === 1) currentMarks = 1;
+                                        else currentMarks = 0; 
                                     }
                                 }
+
+                                if (currentMarks > bestScenarioMarks) {
+                                    bestScenarioMarks = currentMarks;
+                                    bestScenarioStatus = currentStatus;
+                                }
                             }
+
+                            marks = bestScenarioMarks;
+                            status = bestScenarioStatus;
+
+                            if (status === 'correct') sections[q.type].correct++;
                         }
+                    }
 
-                        sections[q.type].score += marks;
-                        totalScore += marks;
-                        
-                        detailedResults.push({
-                            ...q,
-                            marks,
-                            status,
-                            userAnsDisplay: Array.isArray(q.user_answer) ? q.user_answer.join(', ') : q.user_answer,
-                            correctAnsDisplay: Array.isArray(q.correct_answer) ? q.correct_answer.join(', ') : q.correct_answer
-                        });
+                    sections[q.type].score += marks;
+                    totalScore += marks;
+                    
+                    let displayKey = correctAns;
+                    if (Array.isArray(correctAns)) {
+                            if (Array.isArray(correctAns[0])) {
+                                displayKey = correctAns.map(k => k.join('')).join(' OR ');
+                            } else {
+                                displayKey = correctAns.join('');
+                            }
+                    }
+
+                    detailedResults.push({
+                        ...q,
+                        marks,
+                        status,
+                        userAnsDisplay: Array.isArray(q.user_answer) ? q.user_answer.join(', ') : q.user_answer,
+                        correctAnsDisplay: displayKey
                     });
+                });
 
-                    totalScore = parseFloat(totalScore.toFixed(2));
-                    sections.NAT.score = parseFloat(sections.NAT.score.toFixed(2));
-                    sections.MSQ.score = parseFloat(sections.MSQ.score.toFixed(2));
-                    sections.MCQ.score = parseFloat(sections.MCQ.score.toFixed(2));
+                totalScore = parseFloat(totalScore.toFixed(2));
+                sections.NAT.score = parseFloat(sections.NAT.score.toFixed(2));
+                sections.MSQ.score = parseFloat(sections.MSQ.score.toFixed(2));
+                sections.MCQ.score = parseFloat(sections.MCQ.score.toFixed(2));
 
-                    setScoreData({ totalScore, sections, detailedResults });
-                } catch (err) {
-                    setError(err.message);
-                }
+                setScoreData({ totalScore, sections, detailedResults });
             };
 
             const copyToClipboard = (text) => {
@@ -267,200 +380,316 @@ Output ONLY valid raw JSON.`;
                 });
             };
 
+            const getSectionTooltip = (name) => {
+                switch(name) {
+                    case 'NAT':
+                        return (
+                            <div className="space-y-1">
+                                <div className="font-bold border-b border-neutral-100 pb-1 mb-1">Marking Scheme</div>
+                                <div className="flex justify-between gap-4"><span className="text-emerald-600">Correct:</span> <span>+4</span></div>
+                                <div className="flex justify-between gap-4"><span className="text-rose-600">Wrong:</span> <span>0</span></div>
+                                <div className="flex justify-between gap-4"><span className="text-neutral-400">Unattempted:</span> <span>0</span></div>
+                            </div>
+                        );
+                    case 'MSQ':
+                        return (
+                            <div className="space-y-1">
+                                <div className="font-bold border-b border-neutral-100 pb-1 mb-1">Marking Scheme</div>
+                                <div className="flex justify-between gap-4"><span className="text-emerald-600">All Correct:</span> <span>+4</span></div>
+                                <div className="flex justify-between gap-4"><span className="text-amber-600">Partial:</span> <span>+1 to +3</span></div>
+                                <div className="flex justify-between gap-4"><span className="text-rose-600">Any Wrong:</span> <span>-1</span></div>
+                            </div>
+                        );
+                    case 'MCQ':
+                        return (
+                            <div className="space-y-1">
+                                <div className="font-bold border-b border-neutral-100 pb-1 mb-1">Marking Scheme</div>
+                                <div className="flex justify-between gap-4"><span className="text-emerald-600">Correct:</span> <span>+3</span></div>
+                                <div className="flex justify-between gap-4"><span className="text-rose-600">Wrong:</span> <span>-0.71</span></div>
+                                <div className="flex justify-between gap-4"><span className="text-neutral-400">Unattempted:</span> <span>0</span></div>
+                            </div>
+                        );
+                    default: return null;
+                }
+            };
+
+            // Edit Functions
+            const handleSaveEdit = (newAnswer) => {
+                if (!editingQuestion) return;
+                
+                setQuestionsMap(prev => {
+                    const updated = { ...prev };
+                    updated[editingQuestion.id] = { ...updated[editingQuestion.id], user_answer: newAnswer };
+                    return updated;
+                });
+                setEditingQuestion(null);
+            };
+
+            const Modal = ({ question, onClose, onSave }) => {
+                const [val, setVal] = useState(question.user_answer || (question.type === 'MSQ' ? [] : ''));
+                
+                const toggleOption = (opt) => {
+                    if (question.type === 'MSQ') {
+                        let current = Array.isArray(val) ? val : [];
+                        if (current.includes(opt)) {
+                            setVal(current.filter(x => x !== opt).sort());
+                        } else {
+                            setVal([...current, opt].sort());
+                        }
+                    } else {
+                        // MCQ
+                        setVal(opt);
+                    }
+                };
+
+                return (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm animate-fade-in">
+                        <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm m-4 animate-scale-in border border-white/40">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-bold text-neutral-900">Edit Question {question.id}</h3>
+                                <button onClick={onClose} className="p-1 hover:bg-neutral-100 rounded-full"><X className="w-5 h-5 text-neutral-500"/></button>
+                            </div>
+                            
+                            <div className="mb-6">
+                                <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">My Answer</div>
+                                
+                                {question.type === 'NAT' && (
+                                    <input 
+                                        type="number" 
+                                        value={val || ''} 
+                                        onChange={e => setVal(e.target.value)}
+                                        className="w-full p-3 rounded-xl border border-neutral-200 bg-neutral-50 focus:ring-2 focus:ring-neutral-900 outline-none font-mono text-lg"
+                                        placeholder="Enter number"
+                                    />
+                                )}
+
+                                {(question.type === 'MCQ' || question.type === 'MSQ') && (
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {['A','B','C','D'].map(opt => {
+                                            const isSelected = question.type === 'MSQ' ? (Array.isArray(val) && val.includes(opt)) : val === opt;
+                                            return (
+                                                <button 
+                                                    key={opt}
+                                                    onClick={() => toggleOption(opt)}
+                                                    className={`py-3 rounded-xl font-bold transition-all ${isSelected ? 'bg-neutral-900 text-white shadow-lg' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}
+                                                >
+                                                    {opt}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button onClick={() => onSave(null)} className="flex-1 py-3 text-sm font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors">Clear</button>
+                                <button onClick={() => onSave(val)} className="flex-2 w-2/3 py-3 text-sm font-bold text-white bg-neutral-900 hover:bg-black rounded-xl shadow-lg transition-transform active:scale-95">Save Changes</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
             return (
-                <div className="min-h-screen bg-neutral-50 font-sans text-neutral-900 selection:bg-neutral-200">
-                    <header className="bg-white border-b border-neutral-200 sticky top-0 z-10">
+                <div className="min-h-screen">
+                    <header className="glass-panel sticky top-0 z-50 border-b-0">
                         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="bg-neutral-900 text-white p-1.5 rounded">
+                            <div className="flex items-center gap-3 group cursor-default">
+                                <div className="bg-neutral-900 text-white p-2 rounded-xl transition-transform duration-300 group-hover:scale-110 shadow-lg">
                                     <Calculator className="w-5 h-5" />
                                 </div>
-                                <h1 className="text-xl font-bold tracking-tight text-neutral-900">UCEED Analyzer</h1>
+                                <h1 className="text-xl font-extrabold tracking-tight text-neutral-900 transition-transform duration-300 group-hover:translate-x-1">UCEED Calculator</h1>
                             </div>
                             <a 
                                 href="https://www.reddit.com/user/ruxh_alt/" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="text-xs font-medium text-neutral-500 hover:text-neutral-900 transition-colors flex items-center gap-1.5"
+                                className="text-xs font-semibold text-neutral-500 hover:text-neutral-900 transition-colors flex items-center gap-2 bg-white/50 px-4 py-2 rounded-full border border-neutral-200 hover:bg-white hover:shadow-sm"
                             >
                                 <User className="w-3.5 h-3.5" />
-                                Made by Ruxh (@ruxh_alt)
+                                Made by @Ruxh_alt
                             </a>
                         </div>
                     </header>
 
-                    <main className="max-w-5xl mx-auto p-4 sm:p-6 space-y-8">
-                        <section className="py-8 text-center max-w-3xl mx-auto space-y-4">
-                            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-neutral-900">
-                                Calculate your UCEED score <br/>
-                                <span className="text-neutral-400">in seconds.</span>
-                            </h2>
-                            <p className="text-lg text-neutral-600 leading-relaxed">
-                                The official response sheet order is shuffled. This tool aligns your answers with the official question paper and calculates your exact score for Part A (NAT, MSQ, MCQ).
+                    <main className="max-w-5xl mx-auto p-4 sm:p-6 space-y-10 relative z-10">
+                        {editingQuestion && (
+                            <Modal 
+                                question={editingQuestion} 
+                                onClose={() => setEditingQuestion(null)} 
+                                onSave={handleSaveEdit}
+                            />
+                        )}
+
+                        <section className="py-12 flex flex-col items-center text-center max-w-3xl mx-auto space-y-6 animate-fade-in">
+                            <div className="w-full flex justify-center">
+                                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-neutral-200 text-neutral-600 text-xs font-semibold shadow-sm hover:shadow-md transition-shadow">
+                                    <span className="relative flex h-2 w-2">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-neutral-400 opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-neutral-800"></span>
+                                    </span>
+                                    Updated: Final Answer Key (Jan 28)
+                                </div>
+                            </div>
+                            
+                            <div className="w-full flex justify-center pointer-events-none">
+                                <h2 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-neutral-900 leading-[1.1] inline-block group cursor-default text-center pointer-events-none">
+                                    <span className="inline-block transition-transform duration-300 pointer-events-auto">UCEED Score</span> <br/>
+                                    <span className="text-neutral-400 inline-block transition-all duration-300 group-hover:text-neutral-800 group-hover:tracking-widest pointer-events-auto">Calculator</span>
+                                </h2>
+                            </div>
+
+                            <p className="text-lg text-neutral-500 leading-relaxed max-w-2xl mx-auto font-medium">
+                                The official response sheet order is shuffled. This tool aligns your answers with the official paper and calculates your exact score instantly.
                             </p>
-                            <div className="pt-2">
-                                <a 
-                                    href="https://www.reddit.com/user/ruxh_alt/" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-sm font-semibold text-neutral-900 border-b border-neutral-900 pb-0.5 hover:text-neutral-600 hover:border-neutral-600 transition-all"
-                                >
-                                    Follow updates by @ruxh_alt <ExternalLink className="w-3 h-3 ml-1" />
-                                </a>
+
+                            {/* DISCLAIMER BOX */}
+                            <div className="group inline-block cursor-default max-w-lg mx-auto w-full px-4">
+                                <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 flex items-center justify-center gap-2 text-sm text-neutral-500 transition-all duration-300 group-hover:bg-white group-hover:shadow-lg group-hover:border-neutral-300 group-hover:scale-105">
+                                    <AlertTriangle className="w-4 h-4 text-neutral-400 transition-colors group-hover:text-rose-500" />
+                                    <span>
+                                        This calculator is 
+                                        <span className="inline-block px-1 font-bold transition-all duration-300 group-hover:text-rose-600 group-hover:text-base group-hover:scale-110 hover:!text-rose-800 cursor-default">not</span> 
+                                        100% accurate.
+                                    </span>
+                                </div>
+                                <p className="text-xs text-neutral-400 overflow-hidden transition-all duration-500 ease-in-out max-h-0 opacity-0 group-hover:max-h-[40px] group-hover:opacity-100 group-hover:mt-2">
+                                    AI mapping can be 1-3 questions off. Use the "Edit" pencil in Results to fix any errors manually.
+                                </p>
                             </div>
                         </section>
 
-                        <div className="flex justify-center border-b border-neutral-200">
-                            <div className="flex space-x-8">
+                        <div className="flex justify-center animate-fade-in" style={{animationDelay: '0.1s'}}>
+                            <div className="glass-panel p-1.5 rounded-full inline-flex relative shadow-sm">
                                 <button 
                                     onClick={() => setActiveTab('step1')}
-                                    className={`pb-4 px-2 text-sm font-semibold flex items-center gap-2 transition-all ${
+                                    className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2 ${
                                         activeTab === 'step1' 
-                                        ? 'border-b-2 border-neutral-900 text-neutral-900' 
-                                        : 'text-neutral-400 hover:text-neutral-600'
+                                        ? 'bg-neutral-900 text-white shadow-lg' 
+                                        : 'text-neutral-500 hover:text-neutral-800'
                                     }`}
                                 >
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs border ${activeTab === 'step1' ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white text-neutral-400 border-neutral-300'}`}>1</div>
+                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] border ${activeTab === 'step1' ? 'border-neutral-500 text-neutral-200' : 'border-neutral-300'}`}>1</div>
                                     Get Data
                                 </button>
                                 <button 
                                     onClick={() => setActiveTab('step2')}
-                                    className={`pb-4 px-2 text-sm font-semibold flex items-center gap-2 transition-all ${
+                                    className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2 ${
                                         activeTab === 'step2' 
-                                        ? 'border-b-2 border-neutral-900 text-neutral-900' 
-                                        : 'text-neutral-400 hover:text-neutral-600'
+                                        ? 'bg-neutral-900 text-white shadow-lg' 
+                                        : 'text-neutral-500 hover:text-neutral-800'
                                     }`}
                                 >
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs border ${activeTab === 'step2' ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white text-neutral-400 border-neutral-300'}`}>2</div>
+                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] border ${activeTab === 'step2' ? 'border-neutral-500 text-neutral-200' : 'border-neutral-300'}`}>2</div>
                                     Results
                                 </button>
                             </div>
                         </div>
 
                         {activeTab === 'step1' && (
-                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
-                                <div className="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] border border-neutral-200 p-8">
-                                    <h3 className="text-lg font-bold text-neutral-900 mb-4 flex items-center gap-2">
+                            <div className="space-y-6 animate-fade-in max-w-4xl mx-auto" style={{animationDelay: '0.2s'}}>
+                                <div className="glass-panel rounded-3xl p-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-500">
+                                    <h3 className="text-lg font-bold text-neutral-900 mb-6 flex items-center gap-2">
                                         <BookOpen className="w-5 h-5" />
                                         How it works
                                     </h3>
-                                    <div className="grid md:grid-cols-3 gap-6 text-sm text-neutral-600">
-                                        <div className="space-y-2">
-                                            <div className="font-semibold text-neutral-900">1. Prepare Files</div>
-                                            <p>Download your Response Sheet, Official Question Paper, and Official Answer Key PDFs.</p>
+                                    <div className="grid md:grid-cols-2 gap-8 text-sm text-neutral-600">
+                                        <div className="space-y-3">
+                                            <div className="font-bold text-neutral-900 text-base">1. Prepare Files</div>
+                                            <p className="leading-relaxed">Download your <span className="font-bold text-neutral-900">Response Sheet PDF</span> and the <a href="https://www.uceed.iitb.ac.in/2026/assets/downloads/qps/UCEED_2026_Question_Paper.pdf" target="_blank" rel="noopener noreferrer" className="font-bold text-neutral-900 hover:text-indigo-600 underline decoration-indigo-300 underline-offset-2 transition-colors">Official Question Paper PDF</a>.</p>
                                         </div>
-                                        <div className="space-y-2">
-                                            <div className="font-semibold text-neutral-900">2. Ask AI</div>
-                                            <p>Paste the prompt below into Gemini (Thinking/Pro mode preferred) along with your PDFs.</p>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <div className="font-semibold text-neutral-900">3. Get JSON</div>
-                                            <p>Copy the JSON code block the AI gives you and bring it here.</p>
+                                        <div className="space-y-3">
+                                            <div className="font-bold text-neutral-900 text-base">2. Ask AI</div>
+                                            <p className="leading-relaxed">Paste the prompt below into Gemini (Thinking/Pro mode) along with your PDFs. <br/><span className="text-neutral-900 font-bold text-xs bg-white px-2 py-1 rounded border border-neutral-200 mt-2 inline-block shadow-sm">Update: No need to upload Answer Key anymore.</span></p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between px-1">
-                                        <span className="text-sm font-semibold text-neutral-700">Prompt for Gemini</span>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between px-2">
+                                        <span className="text-sm font-bold text-neutral-700 ml-1">Prompt for Gemini (Updated)</span>
                                         <button 
                                             onClick={() => copyToClipboard(extractionPrompt)}
-                                            className="flex items-center gap-1.5 bg-neutral-900 hover:bg-neutral-800 text-white px-4 py-2 rounded-lg text-xs font-medium transition-colors shadow-sm"
+                                            className="flex items-center gap-2 bg-neutral-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg hover:shadow-xl active:scale-95 group"
                                         >
-                                            <ClipboardCopy className="w-3.5 h-3.5" /> Copy Prompt
+                                            <ClipboardCopy className="w-3.5 h-3.5 transition-transform group-hover:rotate-6" /> Copy Prompt
                                         </button>
                                     </div>
-                                    <div className="bg-neutral-100 rounded-xl overflow-hidden border border-neutral-200">
-                                        <div className="p-6 overflow-x-auto max-h-[300px] overflow-y-auto custom-scrollbar">
+                                    <div className="glass-panel rounded-2xl overflow-hidden shadow-sm">
+                                        <div className="p-6 overflow-x-auto max-h-[300px] overflow-y-auto custom-scrollbar bg-white/60">
                                             <pre className="text-neutral-600 text-xs sm:text-sm font-mono whitespace-pre-wrap leading-relaxed">
                                                 {extractionPrompt}
                                             </pre>
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <div className="bg-white border border-neutral-200 rounded-lg p-4 text-sm text-neutral-600 flex items-start gap-3">
-                                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-neutral-400" />
-                                    <div>
-                                        <strong>Missing the Answer Key?</strong>
-                                        <p>If you don't have the Answer Key PDF, the AI might not be able to fill the "correct_answer" field. You can manually input correct answers in the next step.</p>
-                                    </div>
-                                </div>
                             </div>
                         )}
 
                         {activeTab === 'step2' && (
-                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <label className="block text-sm font-semibold text-neutral-900">Paste AI Output (User Data)</label>
-                                        <textarea 
-                                            value={userJsonInput}
-                                            onChange={(e) => setUserJsonInput(e.target.value)}
-                                            placeholder='Paste the JSON here...'
-                                            className="w-full h-48 p-4 rounded-xl border border-neutral-200 bg-white focus:ring-2 focus:ring-neutral-900 focus:border-transparent font-mono text-xs shadow-sm resize-none transition-all placeholder:text-neutral-300"
-                                        />
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                        <label className="block text-sm font-semibold text-neutral-900">
-                                            Paste Answer Key (Optional)
-                                        </label>
-                                        <textarea 
-                                            value={keyJsonInput}
-                                            onChange={(e) => setKeyJsonInput(e.target.value)}
-                                            placeholder='Only needed if first box is missing correct answers...'
-                                            className="w-full h-48 p-4 rounded-xl border border-neutral-200 bg-white focus:ring-2 focus:ring-neutral-900 focus:border-transparent font-mono text-xs shadow-sm resize-none transition-all placeholder:text-neutral-300"
-                                        />
-                                        <div className="flex justify-end">
-                                            <button onClick={() => copyToClipboard(keyOnlyPrompt)} className="text-xs text-neutral-500 hover:text-neutral-900 underline decoration-neutral-300 underline-offset-4 flex items-center gap-1">
-                                                Copy key-only prompt
-                                            </button>
-                                        </div>
-                                    </div>
+                            <div className="space-y-10 animate-fade-in max-w-4xl mx-auto" style={{animationDelay: '0.2s'}}>
+                                <div className="space-y-3">
+                                    <label className="block text-sm font-bold text-neutral-800 ml-2">Paste AI Output (User Data)</label>
+                                    <textarea 
+                                        value={userJsonInput}
+                                        onChange={(e) => setUserJsonInput(e.target.value)}
+                                        placeholder='Paste the JSON here...'
+                                        className="w-full h-48 p-5 rounded-2xl glass-input text-xs shadow-sm resize-none outline-none font-mono text-neutral-600 placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                                    />
                                 </div>
 
                                 <button 
-                                    onClick={calculateScore}
-                                    className="w-full bg-neutral-900 hover:bg-neutral-800 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-[0.99] flex items-center justify-center gap-2"
+                                    onClick={handleInitialCalculation}
+                                    className="w-full bg-neutral-900 hover:bg-black text-white font-bold py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all active:scale-[0.99] flex items-center justify-center gap-2 group"
                                 >
-                                    <Calculator className="w-5 h-5" />
+                                    <Calculator className="w-5 h-5 group-hover:rotate-12 transition-transform" />
                                     Calculate Score
                                 </button>
 
                                 {error && (
-                                    <div className="bg-red-50 border border-red-100 p-4 rounded-xl text-red-600 text-sm flex items-center gap-3">
-                                        <AlertCircle className="h-5 w-5 shrink-0" />
+                                    <div className="bg-white/80 border border-neutral-200 p-4 rounded-2xl text-neutral-800 text-sm flex items-center gap-3 animate-fade-in shadow-sm">
+                                        <AlertCircle className="h-5 w-5 shrink-0 text-neutral-500" />
                                         {error}
                                     </div>
                                 )}
 
                                 {scoreData && (
-                                    <div className="space-y-8 pt-8 border-t border-neutral-200">
+                                    <div className="space-y-8 pt-8 border-t border-neutral-200/50 animate-fade-in">
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                            <div className="bg-neutral-900 rounded-2xl p-6 text-white shadow-xl md:col-span-1 flex flex-col justify-between relative overflow-hidden">
+                                            <div className="bg-neutral-900 rounded-3xl p-6 text-white shadow-xl md:col-span-1 flex flex-col justify-between relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
                                                 <div className="relative z-10">
-                                                    <div className="text-neutral-400 text-sm font-medium mb-1 uppercase tracking-wider">Total Score</div>
-                                                    <div className="text-5xl font-bold tracking-tighter">{scoreData.totalScore}</div>
-                                                    <div className="text-neutral-500 text-xs mt-2">Part A (Max 200)</div>
+                                                    <div className="text-neutral-400 text-sm font-bold mb-1 uppercase tracking-wider">Total Score</div>
+                                                    <div className="text-5xl font-extrabold tracking-tighter">{scoreData.totalScore}</div>
+                                                    <div className="text-neutral-500 text-xs mt-2 font-medium">Part A (Max 200)</div>
                                                 </div>
-                                                <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-neutral-800 rounded-full blur-2xl opacity-50"></div>
+                                                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white rounded-full blur-3xl opacity-5 group-hover:opacity-10 transition-opacity"></div>
                                             </div>
 
                                             {Object.entries(scoreData.sections).map(([name, data]) => (
-                                                <div key={name} className="bg-white rounded-2xl p-6 border border-neutral-200 shadow-sm hover:shadow-md transition-shadow">
+                                                <div key={name} className="glass-panel rounded-3xl p-6 hover:-translate-y-1 transition-all duration-300 relative group">
+                                                    
+                                                    {/* INFO ICON & TOOLTIP */}
+                                                    <div className="absolute top-4 right-4 tooltip-trigger cursor-help">
+                                                        <div className="p-1.5 rounded-full hover:bg-neutral-100 transition-colors text-neutral-400 hover:text-neutral-600">
+                                                            <Info className="w-4 h-4" />
+                                                        </div>
+                                                        <div className="tooltip-content absolute bottom-full right-0 mb-2 w-56 p-3 bg-white rounded-xl shadow-xl border border-neutral-100 text-xs text-neutral-600 z-50 pointer-events-none">
+                                                            {getSectionTooltip(name)}
+                                                            <div className="absolute bottom-[-4px] right-3 w-2 h-2 bg-white border-b border-r border-neutral-100 rotate-45"></div>
+                                                        </div>
+                                                    </div>
+
                                                     <div className="flex justify-between items-start mb-4">
-                                                        <div className="bg-neutral-100 px-2 py-1 rounded text-xs font-bold text-neutral-600">{name}</div>
-                                                        {name === 'NAT' && <span className="text-[10px] text-neutral-400 bg-neutral-50 px-1.5 py-0.5 rounded border border-neutral-100">No Negative</span>}
+                                                        <div className="bg-white/80 px-3 py-1 rounded-lg text-xs font-bold text-neutral-800 border border-neutral-200 shadow-sm">{name}</div>
                                                     </div>
                                                     <div className="text-3xl font-bold text-neutral-900 mb-1">{data.score}</div>
-                                                    <div className="text-xs text-neutral-500 flex justify-between">
+                                                    <div className="text-xs text-neutral-500 flex justify-between font-medium">
                                                         <span>Correct: {data.correct}/{data.attempted}</span>
                                                         <span>Max: {data.total}</span>
                                                     </div>
-                                                    <div className="w-full bg-neutral-100 h-1.5 rounded-full mt-3 overflow-hidden">
+                                                    <div className="w-full bg-neutral-100 h-2 rounded-full mt-4 overflow-hidden">
                                                         <div 
-                                                            className="bg-neutral-800 h-full rounded-full" 
+                                                            className="bg-neutral-800 h-full rounded-full transition-all duration-1000 ease-out" 
                                                             style={{ width: `${Math.max(0, (data.score / data.total) * 100)}%` }}
                                                         ></div>
                                                     </div>
@@ -468,47 +697,70 @@ Output ONLY valid raw JSON.`;
                                             ))}
                                         </div>
 
-                                        <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
-                                            <div className="px-6 py-4 border-b border-neutral-200 bg-neutral-50/50 flex justify-between items-center">
-                                                <h3 className="font-semibold text-neutral-800">Breakdown</h3>
-                                                <span className="text-xs text-neutral-400 font-mono">ID:1-57</span>
+                                        <div className="glass-panel rounded-3xl overflow-hidden shadow-lg">
+                                            <div className="px-6 py-4 border-b border-neutral-100 bg-white/40 flex justify-between items-center">
+                                                <h3 className="font-bold text-neutral-900">Breakdown</h3>
+                                                <span className="text-xs text-neutral-500 font-mono bg-white px-2 py-1 rounded border border-neutral-200">ID:1-57</span>
                                             </div>
-                                            <div className="overflow-x-auto">
+                                            <div className="overflow-x-auto max-h-[600px] custom-scrollbar">
                                                 <table className="w-full text-sm text-left">
-                                                    <thead className="bg-white text-neutral-400 font-medium border-b border-neutral-100">
+                                                    <thead className="text-neutral-500 font-semibold border-b border-neutral-100 sticky top-0 z-10">
                                                         <tr>
-                                                            <th className="px-6 py-3 font-medium">Q</th>
-                                                            <th className="px-6 py-3 font-medium">Type</th>
-                                                            <th className="px-6 py-3 font-medium">You</th>
-                                                            <th className="px-6 py-3 font-medium">Key</th>
-                                                            <th className="px-6 py-3 font-medium">Marks</th>
-                                                            <th className="px-6 py-3 text-right font-medium">Status</th>
+                                                            <th className="px-6 py-4 bg-white/90 backdrop-blur">Q</th>
+                                                            <th className="px-6 py-4 bg-white/90 backdrop-blur">Type</th>
+                                                            <th className="px-6 py-4 bg-white/90 backdrop-blur">You</th>
+                                                            <th className="px-6 py-4 bg-white/90 backdrop-blur">Key</th>
+                                                            <th className="px-6 py-4 bg-white/90 backdrop-blur">Marks</th>
+                                                            <th className="px-6 py-4 text-right bg-white/90 backdrop-blur">Status</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-neutral-100">
                                                         {scoreData.detailedResults.map((row) => (
-                                                            <tr key={row.id} className="hover:bg-neutral-50 transition-colors">
-                                                                <td className="px-6 py-3 font-medium text-neutral-900">{row.id}</td>
-                                                                <td className="px-6 py-3">
-                                                                    <span className="text-xs text-neutral-500 font-mono">
+                                                            <tr key={row.id} className="hover:bg-white/60 transition-colors">
+                                                                <td className="px-6 py-4 font-bold text-neutral-800">{row.id}</td>
+                                                                <td className="px-6 py-4">
+                                                                    <span className="text-[10px] font-bold text-neutral-500 bg-neutral-100 px-2 py-1 rounded border border-neutral-200">
                                                                         {row.type}
                                                                     </span>
                                                                 </td>
-                                                                <td className="px-6 py-3 font-mono text-neutral-700">
-                                                                    {row.userAnsDisplay === null || row.userAnsDisplay === undefined ? 
-                                                                        <span className="text-neutral-300">-</span> : row.userAnsDisplay}
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="font-mono text-neutral-600">
+                                                                            {row.userAnsDisplay === null || row.userAnsDisplay === undefined || row.userAnsDisplay === '' ? 
+                                                                            <span className="text-neutral-300">-</span> : row.userAnsDisplay}
+                                                                        </span>
+                                                                        <button 
+                                                                            onClick={() => setEditingQuestion(row)}
+                                                                            className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-300 hover:text-neutral-600 transition-colors"
+                                                                            title="Edit Answer"
+                                                                        >
+                                                                            <Pencil className="w-3.5 h-3.5" />
+                                                                        </button>
+                                                                    </div>
                                                                 </td>
-                                                                <td className="px-6 py-3 font-mono text-neutral-700">
+                                                                <td className="px-6 py-4 font-mono text-neutral-600">
                                                                     {row.correctAnsDisplay || <span className="text-neutral-300">?</span>}
                                                                 </td>
-                                                                <td className={`px-6 py-3 font-bold ${row.marks > 0 ? 'text-emerald-600' : row.marks < 0 ? 'text-red-600' : 'text-neutral-300'}`}>
+                                                                <td className={`px-6 py-4 font-bold ${row.marks > 0 ? 'text-emerald-600' : row.marks < 0 ? 'text-rose-500' : 'text-neutral-300'}`}>
                                                                     {row.marks > 0 ? '+' : ''}{row.marks}
                                                                 </td>
-                                                                <td className="px-6 py-3 text-right">
-                                                                    {row.status === 'correct' && <span className="text-emerald-600 text-xs font-semibold bg-emerald-50 px-2 py-1 rounded-full">Correct</span>}
-                                                                    {row.status === 'wrong' && <span className="text-red-500 text-xs font-semibold bg-red-50 px-2 py-1 rounded-full">Wrong</span>}
-                                                                    {row.status === 'partial' && <span className="text-amber-500 text-xs font-semibold bg-amber-50 px-2 py-1 rounded-full">Partial</span>}
-                                                                    {row.status === 'unattempted' && <span className="text-neutral-300 text-xs">Unattempted</span>}
+                                                                <td className="px-6 py-4 text-right">
+                                                                    {row.status === 'correct' && (
+                                                                        <span className="inline-flex items-center gap-1.5 text-emerald-700 text-xs font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                                                                            <Check className="w-3 h-3" /> Correct
+                                                                        </span>
+                                                                    )}
+                                                                    {row.status === 'wrong' && (
+                                                                        <span className="inline-flex items-center gap-1.5 text-rose-600 text-xs font-bold bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
+                                                                            <X className="w-3 h-3" /> Wrong
+                                                                        </span>
+                                                                    )}
+                                                                    {row.status === 'partial' && (
+                                                                        <span className="inline-flex items-center gap-1.5 text-amber-600 text-xs font-bold bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+                                                                            Partial
+                                                                        </span>
+                                                                    )}
+                                                                    {row.status === 'unattempted' && <span className="text-neutral-300 text-xs font-medium italic">Unattempted</span>}
                                                                     {row.status === 'unknown' && <span className="text-neutral-300 text-xs">No Key</span>}
                                                                 </td>
                                                             </tr>
@@ -523,10 +775,10 @@ Output ONLY valid raw JSON.`;
                         )}
                     </main>
 
-                    <footer className="max-w-5xl mx-auto p-6 text-center border-t border-neutral-200 mt-12">
-                        <p className="text-neutral-400 text-xs">
+                    <footer className="max-w-5xl mx-auto p-8 text-center mt-12 bg-white/30 backdrop-blur-md border-t border-white/40">
+                        <p className="text-neutral-400 text-xs font-medium">
                             Unofficial Tool. Not affiliated with UCEED or IIT Bombay. <br/>
-                            <a href="https://www.reddit.com/user/ruxh_alt/" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-600 underline">Made by Ruxh</a>
+                            <a href="https://www.reddit.com/user/ruxh_alt/" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-900 underline transition-colors">Made by @Ruxh_alt</a>
                         </p>
                     </footer>
                 </div>
