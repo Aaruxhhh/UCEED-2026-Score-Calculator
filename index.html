@@ -70,7 +70,6 @@
             transform: translateY(10px);
             transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        /* Only show when hovering the TRIGGER element specifically */
         .tooltip-trigger:hover .tooltip-content,
         .tooltip-trigger:active .tooltip-content,
         .tooltip-trigger:focus .tooltip-content {
@@ -93,9 +92,6 @@
         );
         const User = (props) => (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        );
-        const ExternalLink = (props) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
         );
         const BookOpen = (props) => (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
@@ -140,41 +136,38 @@
             const [error, setError] = useState(null);
             const [editingQuestion, setEditingQuestion] = useState(null); 
 
-            const extractionPrompt = `I need you to perform a high-precision data extraction task for UCEED 2026. This requires careful, step-by-step visual mapping because the files are shuffled.
-
-**YOUR GOAL:**
-Create a JSON object mapping the **Official Question Number** (from the Official Paper) to the **User's Answer** (from the Response Sheet).
+            const extractionPrompt = `I need you to perform a high-precision data extraction for UCEED 2026. This requires following a strict mathematical logic to ensure 100% accuracy.
 
 **FILES TO ANALYZE:**
-1.  **Response Sheet (File 1):** Contains the user's answers. *CRITICAL:* The questions here are in a RANDOM shuffled order. The "Question ID" shown here is meaningless for ordering.
-2.  **Official Question Paper (File 2):** Contains the correct order (Q1 to Q57) and the actual text/images of each question.
+1.  **Response Sheet (File 1):** Contains the user's answers and a "Question ID" for each. The questions here are SHUFFLED.
+2.  **Official Question Paper (File 2):** Contains questions in the correct order (Q1 to Q57).
 
-**STEP-BY-STEP INSTRUCTIONS:**
-Please take your time and follow this process for every single question (1 to 57):
+**THE MASTER LOGIC:**
+The "Question IDs" on the Response Sheet, when sorted in increasing order, correspond exactly to the sequence of the Official Question Paper (Q1, Q2, Q3...).
 
-1.  **Look at Question 1** in the **Official Question Paper**. Note its text and images.
-2.  **Search** the entire **Response Sheet** to find the question that **visually matches** Question 1.
-    * *Note:* It might be at the very end of the PDF. Do not rely on text matching alone; compare the images carefully.
-3.  **Extract** the user's chosen answer for that specific question.
-4.  **Repeat** this process for all 57 questions.
+**YOUR TASK (Step-by-Step):**
+1.  List every question found in the **Response Sheet**.
+2.  For each, extract:
+    * **Question ID:** (The unique long number provided in the sheet).
+    * **User Answer:** (The value or letters selected by the user).
+3.  **Sort** this list in ascending order of the **Question ID**.
+4.  The 1st Question ID in your sorted list is **Q1**, the 2nd is **Q2**, and so on up to **Q57**.
+5.  **Visual Cross-Check:** Quickly verify the text/images of your mapped Q1, Q2, etc., against the Official Question Paper to confirm they match.
 
-**EXTRACTION FORMAT:**
-* **NAT (Q1-14):** Extract the numerical value entered.
-* **MSQ (Q15-29):** Extract the selected options as an array of uppercase letters (e.g., ["A", "C"]).
-* **MCQ (Q30-57):** Extract the single selected option as a string (e.g., "B").
+**EXTRACTION RULES:**
+* **NAT (Q1-14):** Numerical value (e.g., "14" or "25.5").
+* **MSQ (Q15-29):** Array of letters (e.g., ["A", "C"]).
+* **MCQ (Q30-57):** Single letter (e.g., "B").
 * **Unattempted:** If the status is "Not Answered", set \`user_answer\` to \`null\`.
 
-**OUTPUT REQUIREMENTS:**
-* Output **ONLY** a valid, raw JSON object.
-* The keys must be the **Official Question Numbers** (strings "1" to "57").
-* Do not include any markdown, code blocks (\`\`\`json), or explanations. Just the raw JSON string.
+**OUTPUT FORMAT:**
+Provide ONLY a raw JSON object. No markdown, no explanations. Just the JSON.
 
-**JSON STRUCTURE:**
 {
   "1": { "type": "NAT", "user_answer": "14" },
   "2": { "type": "NAT", "user_answer": "25.5" },
   ...
-  "15": { "type": "MSQ", "user_answer": ["A", "B", "D"] },
+  "15": { "type": "MSQ", "user_answer": ["A", "B"] },
   ...
   "30": { "type": "MCQ", "user_answer": "C" }
 }`;
@@ -413,10 +406,8 @@ Please take your time and follow this process for every single question (1 to 57
                 }
             };
 
-            // Edit Functions
             const handleSaveEdit = (newAnswer) => {
                 if (!editingQuestion) return;
-                
                 setQuestionsMap(prev => {
                     const updated = { ...prev };
                     updated[editingQuestion.id] = { ...updated[editingQuestion.id], user_answer: newAnswer };
@@ -427,19 +418,12 @@ Please take your time and follow this process for every single question (1 to 57
 
             const Modal = ({ question, onClose, onSave }) => {
                 const [val, setVal] = useState(question.user_answer || (question.type === 'MSQ' ? [] : ''));
-                
                 const toggleOption = (opt) => {
                     if (question.type === 'MSQ') {
                         let current = Array.isArray(val) ? val : [];
-                        if (current.includes(opt)) {
-                            setVal(current.filter(x => x !== opt).sort());
-                        } else {
-                            setVal([...current, opt].sort());
-                        }
-                    } else {
-                        // MCQ
-                        setVal(opt);
-                    }
+                        if (current.includes(opt)) setVal(current.filter(x => x !== opt).sort());
+                        else setVal([...current, opt].sort());
+                    } else setVal(opt);
                 };
 
                 return (
@@ -449,38 +433,20 @@ Please take your time and follow this process for every single question (1 to 57
                                 <h3 className="text-lg font-bold text-neutral-900">Edit Question {question.id}</h3>
                                 <button onClick={onClose} className="p-1 hover:bg-neutral-100 rounded-full"><X className="w-5 h-5 text-neutral-500"/></button>
                             </div>
-                            
                             <div className="mb-6">
                                 <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">My Answer</div>
-                                
                                 {question.type === 'NAT' && (
-                                    <input 
-                                        type="number" 
-                                        value={val || ''} 
-                                        onChange={e => setVal(e.target.value)}
-                                        className="w-full p-3 rounded-xl border border-neutral-200 bg-neutral-50 focus:ring-2 focus:ring-neutral-900 outline-none font-mono text-lg"
-                                        placeholder="Enter number"
-                                    />
+                                    <input type="number" value={val || ''} onChange={e => setVal(e.target.value)} className="w-full p-3 rounded-xl border border-neutral-200 bg-neutral-50 focus:ring-2 focus:ring-neutral-900 outline-none font-mono text-lg" placeholder="Enter number" />
                                 )}
-
                                 {(question.type === 'MCQ' || question.type === 'MSQ') && (
                                     <div className="grid grid-cols-4 gap-2">
                                         {['A','B','C','D'].map(opt => {
                                             const isSelected = question.type === 'MSQ' ? (Array.isArray(val) && val.includes(opt)) : val === opt;
-                                            return (
-                                                <button 
-                                                    key={opt}
-                                                    onClick={() => toggleOption(opt)}
-                                                    className={`py-3 rounded-xl font-bold transition-all ${isSelected ? 'bg-neutral-900 text-white shadow-lg' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}
-                                                >
-                                                    {opt}
-                                                </button>
-                                            )
+                                            return <button key={opt} onClick={() => toggleOption(opt)} className={`py-3 rounded-xl font-bold transition-all ${isSelected ? 'bg-neutral-900 text-white shadow-lg' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}>{opt}</button>
                                         })}
                                     </div>
                                 )}
                             </div>
-
                             <div className="flex gap-3">
                                 <button onClick={() => onSave(null)} className="flex-1 py-3 text-sm font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors">Clear</button>
                                 <button onClick={() => onSave(val)} className="flex-2 w-2/3 py-3 text-sm font-bold text-white bg-neutral-900 hover:bg-black rounded-xl shadow-lg transition-transform active:scale-95">Save Changes</button>
@@ -495,31 +461,17 @@ Please take your time and follow this process for every single question (1 to 57
                     <header className="glass-panel sticky top-0 z-50 border-b-0">
                         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
                             <div className="flex items-center gap-3 group cursor-default">
-                                <div className="bg-neutral-900 text-white p-2 rounded-xl transition-transform duration-300 group-hover:scale-110 shadow-lg">
-                                    <Calculator className="w-5 h-5" />
-                                </div>
+                                <div className="bg-neutral-900 text-white p-2 rounded-xl transition-transform duration-300 group-hover:scale-110 shadow-lg"><Calculator className="w-5 h-5" /></div>
                                 <h1 className="text-xl font-extrabold tracking-tight text-neutral-900 transition-transform duration-300 group-hover:translate-x-1">UCEED Calculator</h1>
                             </div>
-                            <a 
-                                href="https://www.reddit.com/user/ruxh_alt/" 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-xs font-semibold text-neutral-500 hover:text-neutral-900 transition-colors flex items-center gap-2 bg-white/50 px-4 py-2 rounded-full border border-neutral-200 hover:bg-white hover:shadow-sm"
-                            >
-                                <User className="w-3.5 h-3.5" />
-                                Made by @Ruxh_alt
+                            <a href="https://www.reddit.com/user/ruxh_alt/" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-neutral-500 hover:text-neutral-900 transition-colors flex items-center gap-2 bg-white/50 px-4 py-2 rounded-full border border-neutral-200 hover:bg-white hover:shadow-sm">
+                                <User className="w-3.5 h-3.5" /> Made by @Ruxh_alt
                             </a>
                         </div>
                     </header>
 
                     <main className="max-w-5xl mx-auto p-4 sm:p-6 space-y-10 relative z-10">
-                        {editingQuestion && (
-                            <Modal 
-                                question={editingQuestion} 
-                                onClose={() => setEditingQuestion(null)} 
-                                onSave={handleSaveEdit}
-                            />
-                        )}
+                        {editingQuestion && <Modal question={editingQuestion} onClose={() => setEditingQuestion(null)} onSave={handleSaveEdit} />}
 
                         <section className="py-12 flex flex-col items-center text-center max-w-3xl mx-auto space-y-6 animate-fade-in">
                             <div className="w-full flex justify-center">
@@ -540,48 +492,27 @@ Please take your time and follow this process for every single question (1 to 57
                             </div>
 
                             <p className="text-lg text-neutral-500 leading-relaxed max-w-2xl mx-auto font-medium">
-                                The official response sheet order is shuffled. This tool aligns your answers with the official paper and calculates your exact score instantly.
+                                Shuffled response sheet? No problem. This tool sorts your answers by Question ID and maps them perfectly to the official question paper.
                             </p>
 
-                            {/* DISCLAIMER BOX */}
                             <div className="group inline-block cursor-default max-w-lg mx-auto w-full px-4">
                                 <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 flex items-center justify-center gap-2 text-sm text-neutral-500 transition-all duration-300 group-hover:bg-white group-hover:shadow-lg group-hover:border-neutral-300 group-hover:scale-105">
                                     <AlertTriangle className="w-4 h-4 text-neutral-400 transition-colors group-hover:text-rose-500" />
-                                    <span>
-                                        This calculator is 
-                                        <span className="inline-block px-1 font-bold transition-all duration-300 group-hover:text-rose-600 group-hover:text-base group-hover:scale-110 hover:!text-rose-800 cursor-default">not</span> 
-                                        100% accurate.
-                                    </span>
+                                    <span>This calculator is <span className="inline-block px-1 font-bold transition-all duration-300 group-hover:text-rose-600 group-hover:text-base group-hover:scale-110 hover:!text-rose-800 cursor-default">not</span> 100% accurate.</span>
                                 </div>
                                 <p className="text-xs text-neutral-400 overflow-hidden transition-all duration-500 ease-in-out max-h-0 opacity-0 group-hover:max-h-[40px] group-hover:opacity-100 group-hover:mt-2">
-                                    AI mapping can be 1-3 questions off. Use the "Edit" pencil in Results to fix any errors manually.
+                                    AI sometimes misreads handwritten NAT answers. Use the "Edit" pencil in Results to manually fix any errors.
                                 </p>
                             </div>
                         </section>
 
                         <div className="flex justify-center animate-fade-in" style={{animationDelay: '0.1s'}}>
                             <div className="glass-panel p-1.5 rounded-full inline-flex relative shadow-sm">
-                                <button 
-                                    onClick={() => setActiveTab('step1')}
-                                    className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2 ${
-                                        activeTab === 'step1' 
-                                        ? 'bg-neutral-900 text-white shadow-lg' 
-                                        : 'text-neutral-500 hover:text-neutral-800'
-                                    }`}
-                                >
-                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] border ${activeTab === 'step1' ? 'border-neutral-500 text-neutral-200' : 'border-neutral-300'}`}>1</div>
-                                    Get Data
+                                <button onClick={() => setActiveTab('step1')} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2 ${activeTab === 'step1' ? 'bg-neutral-900 text-white shadow-lg' : 'text-neutral-500 hover:text-neutral-800'}`}>
+                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] border ${activeTab === 'step1' ? 'border-neutral-500 text-neutral-200' : 'border-neutral-300'}`}>1</div> Get Data
                                 </button>
-                                <button 
-                                    onClick={() => setActiveTab('step2')}
-                                    className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2 ${
-                                        activeTab === 'step2' 
-                                        ? 'bg-neutral-900 text-white shadow-lg' 
-                                        : 'text-neutral-500 hover:text-neutral-800'
-                                    }`}
-                                >
-                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] border ${activeTab === 'step2' ? 'border-neutral-500 text-neutral-200' : 'border-neutral-300'}`}>2</div>
-                                    Results
+                                <button onClick={() => setActiveTab('step2')} className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2 ${activeTab === 'step2' ? 'bg-neutral-900 text-white shadow-lg' : 'text-neutral-500 hover:text-neutral-800'}`}>
+                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] border ${activeTab === 'step2' ? 'border-neutral-500 text-neutral-200' : 'border-neutral-300'}`}>2</div> Results
                                 </button>
                             </div>
                         </div>
@@ -589,10 +520,7 @@ Please take your time and follow this process for every single question (1 to 57
                         {activeTab === 'step1' && (
                             <div className="space-y-6 animate-fade-in max-w-4xl mx-auto" style={{animationDelay: '0.2s'}}>
                                 <div className="glass-panel rounded-3xl p-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-500">
-                                    <h3 className="text-lg font-bold text-neutral-900 mb-6 flex items-center gap-2">
-                                        <BookOpen className="w-5 h-5" />
-                                        How it works
-                                    </h3>
+                                    <h3 className="text-lg font-bold text-neutral-900 mb-6 flex items-center gap-2"><BookOpen className="w-5 h-5" /> How it works</h3>
                                     <div className="grid md:grid-cols-2 gap-8 text-sm text-neutral-600">
                                         <div className="space-y-3">
                                             <div className="font-bold text-neutral-900 text-base">1. Prepare Files</div>
@@ -600,7 +528,7 @@ Please take your time and follow this process for every single question (1 to 57
                                         </div>
                                         <div className="space-y-3">
                                             <div className="font-bold text-neutral-900 text-base">2. Ask AI</div>
-                                            <p className="leading-relaxed">Paste the prompt below into Gemini (Thinking/Pro mode) along with your PDFs. <br/><span className="text-neutral-900 font-bold text-xs bg-white px-2 py-1 rounded border border-neutral-200 mt-2 inline-block shadow-sm">Update: No need to upload Answer Key anymore.</span></p>
+                                            <p className="leading-relaxed">Paste the prompt below into Gemini (Thinking/Pro mode) along with your PDFs. <br/><span className="text-neutral-900 font-bold text-xs bg-white px-2 py-1 rounded border border-neutral-200 mt-2 inline-block shadow-sm">Updated: Logic improved for 100% accuracy.</span></p>
                                         </div>
                                     </div>
                                 </div>
@@ -608,18 +536,13 @@ Please take your time and follow this process for every single question (1 to 57
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between px-2">
                                         <span className="text-sm font-bold text-neutral-700 ml-1">Prompt for Gemini (Updated)</span>
-                                        <button 
-                                            onClick={() => copyToClipboard(extractionPrompt)}
-                                            className="flex items-center gap-2 bg-neutral-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg hover:shadow-xl active:scale-95 group"
-                                        >
+                                        <button onClick={() => copyToClipboard(extractionPrompt)} className="flex items-center gap-2 bg-neutral-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg hover:shadow-xl active:scale-95 group">
                                             <ClipboardCopy className="w-3.5 h-3.5 transition-transform group-hover:rotate-6" /> Copy Prompt
                                         </button>
                                     </div>
                                     <div className="glass-panel rounded-2xl overflow-hidden shadow-sm">
                                         <div className="p-6 overflow-x-auto max-h-[300px] overflow-y-auto custom-scrollbar bg-white/60">
-                                            <pre className="text-neutral-600 text-xs sm:text-sm font-mono whitespace-pre-wrap leading-relaxed">
-                                                {extractionPrompt}
-                                            </pre>
+                                            <pre className="text-neutral-600 text-xs sm:text-sm font-mono whitespace-pre-wrap leading-relaxed">{extractionPrompt}</pre>
                                         </div>
                                     </div>
                                 </div>
@@ -630,26 +553,16 @@ Please take your time and follow this process for every single question (1 to 57
                             <div className="space-y-10 animate-fade-in max-w-4xl mx-auto" style={{animationDelay: '0.2s'}}>
                                 <div className="space-y-3">
                                     <label className="block text-sm font-bold text-neutral-800 ml-2">Paste AI Output (User Data)</label>
-                                    <textarea 
-                                        value={userJsonInput}
-                                        onChange={(e) => setUserJsonInput(e.target.value)}
-                                        placeholder='Paste the JSON here...'
-                                        className="w-full h-48 p-5 rounded-2xl glass-input text-xs shadow-sm resize-none outline-none font-mono text-neutral-600 placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
-                                    />
+                                    <textarea value={userJsonInput} onChange={(e) => setUserJsonInput(e.target.value)} placeholder='Paste the JSON here...' className="w-full h-48 p-5 rounded-2xl glass-input text-xs shadow-sm resize-none outline-none font-mono text-neutral-600 placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-900 focus:border-transparent" />
                                 </div>
 
-                                <button 
-                                    onClick={handleInitialCalculation}
-                                    className="w-full bg-neutral-900 hover:bg-black text-white font-bold py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all active:scale-[0.99] flex items-center justify-center gap-2 group"
-                                >
-                                    <Calculator className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                                    Calculate Score
+                                <button onClick={handleInitialCalculation} className="w-full bg-neutral-900 hover:bg-black text-white font-bold py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all active:scale-[0.99] flex items-center justify-center gap-2 group">
+                                    <Calculator className="w-5 h-5 group-hover:rotate-12 transition-transform" /> Calculate Score
                                 </button>
 
                                 {error && (
                                     <div className="bg-white/80 border border-neutral-200 p-4 rounded-2xl text-neutral-800 text-sm flex items-center gap-3 animate-fade-in shadow-sm">
-                                        <AlertCircle className="h-5 w-5 shrink-0 text-neutral-500" />
-                                        {error}
+                                        <AlertCircle className="h-5 w-5 shrink-0 text-neutral-500" /> {error}
                                     </div>
                                 )}
 
@@ -660,39 +573,26 @@ Please take your time and follow this process for every single question (1 to 57
                                                 <div className="relative z-10">
                                                     <div className="text-neutral-400 text-sm font-bold mb-1 uppercase tracking-wider">Total Score</div>
                                                     <div className="text-5xl font-extrabold tracking-tighter">{scoreData.totalScore}</div>
-                                                    <div className="text-neutral-500 text-xs mt-2 font-medium">Part A (Max 200)</div>
+                                                    <div className="text-slate-500 text-xs mt-2 font-medium">Part A (Max 200)</div>
                                                 </div>
                                                 <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white rounded-full blur-3xl opacity-5 group-hover:opacity-10 transition-opacity"></div>
                                             </div>
 
                                             {Object.entries(scoreData.sections).map(([name, data]) => (
                                                 <div key={name} className="glass-panel rounded-3xl p-6 hover:-translate-y-1 transition-all duration-300 relative group">
-                                                    
-                                                    {/* INFO ICON & TOOLTIP */}
                                                     <div className="absolute top-4 right-4 tooltip-trigger cursor-help">
-                                                        <div className="p-1.5 rounded-full hover:bg-neutral-100 transition-colors text-neutral-400 hover:text-neutral-600">
-                                                            <Info className="w-4 h-4" />
-                                                        </div>
+                                                        <div className="p-1.5 rounded-full hover:bg-neutral-100 transition-colors text-neutral-400 hover:text-neutral-600"><Info className="w-4 h-4" /></div>
                                                         <div className="tooltip-content absolute bottom-full right-0 mb-2 w-56 p-3 bg-white rounded-xl shadow-xl border border-neutral-100 text-xs text-neutral-600 z-50 pointer-events-none">
                                                             {getSectionTooltip(name)}
                                                             <div className="absolute bottom-[-4px] right-3 w-2 h-2 bg-white border-b border-r border-neutral-100 rotate-45"></div>
                                                         </div>
                                                     </div>
-
                                                     <div className="flex justify-between items-start mb-4">
                                                         <div className="bg-white/80 px-3 py-1 rounded-lg text-xs font-bold text-neutral-800 border border-neutral-200 shadow-sm">{name}</div>
                                                     </div>
                                                     <div className="text-3xl font-bold text-neutral-900 mb-1">{data.score}</div>
-                                                    <div className="text-xs text-neutral-500 flex justify-between font-medium">
-                                                        <span>Correct: {data.correct}/{data.attempted}</span>
-                                                        <span>Max: {data.total}</span>
-                                                    </div>
-                                                    <div className="w-full bg-neutral-100 h-2 rounded-full mt-4 overflow-hidden">
-                                                        <div 
-                                                            className="bg-neutral-800 h-full rounded-full transition-all duration-1000 ease-out" 
-                                                            style={{ width: `${Math.max(0, (data.score / data.total) * 100)}%` }}
-                                                        ></div>
-                                                    </div>
+                                                    <div className="text-xs text-neutral-500 flex justify-between font-medium"><span>Correct: {data.correct}/{data.attempted}</span> <span>Max: {data.total}</span></div>
+                                                    <div className="w-full bg-neutral-100 h-2 rounded-full mt-4 overflow-hidden"><div className="bg-neutral-800 h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${Math.max(0, (data.score / data.total) * 100)}%` }}></div></div>
                                                 </div>
                                             ))}
                                         </div>
@@ -718,48 +618,19 @@ Please take your time and follow this process for every single question (1 to 57
                                                         {scoreData.detailedResults.map((row) => (
                                                             <tr key={row.id} className="hover:bg-white/60 transition-colors">
                                                                 <td className="px-6 py-4 font-bold text-neutral-800">{row.id}</td>
-                                                                <td className="px-6 py-4">
-                                                                    <span className="text-[10px] font-bold text-neutral-500 bg-neutral-100 px-2 py-1 rounded border border-neutral-200">
-                                                                        {row.type}
-                                                                    </span>
-                                                                </td>
+                                                                <td className="px-6 py-4"><span className="text-[10px] font-bold text-neutral-500 bg-neutral-100 px-2 py-1 rounded border border-neutral-200">{row.type}</span></td>
                                                                 <td className="px-6 py-4">
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="font-mono text-neutral-600">
-                                                                            {row.userAnsDisplay === null || row.userAnsDisplay === undefined || row.userAnsDisplay === '' ? 
-                                                                            <span className="text-neutral-300">-</span> : row.userAnsDisplay}
-                                                                        </span>
-                                                                        <button 
-                                                                            onClick={() => setEditingQuestion(row)}
-                                                                            className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-300 hover:text-neutral-600 transition-colors"
-                                                                            title="Edit Answer"
-                                                                        >
-                                                                            <Pencil className="w-3.5 h-3.5" />
-                                                                        </button>
+                                                                        <span className="font-mono text-neutral-600">{row.userAnsDisplay === null || row.userAnsDisplay === undefined || row.userAnsDisplay === '' ? <span className="text-neutral-300">-</span> : row.userAnsDisplay}</span>
+                                                                        <button onClick={() => setEditingQuestion(row)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-300 hover:text-neutral-600 transition-colors" title="Edit Answer"><Pencil className="w-3.5 h-3.5" /></button>
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-6 py-4 font-mono text-neutral-600">
-                                                                    {row.correctAnsDisplay || <span className="text-neutral-300">?</span>}
-                                                                </td>
-                                                                <td className={`px-6 py-4 font-bold ${row.marks > 0 ? 'text-emerald-600' : row.marks < 0 ? 'text-rose-500' : 'text-neutral-300'}`}>
-                                                                    {row.marks > 0 ? '+' : ''}{row.marks}
-                                                                </td>
+                                                                <td className="px-6 py-4 font-mono text-neutral-600">{row.correctAnsDisplay || <span className="text-neutral-300">?</span>}</td>
+                                                                <td className={`px-6 py-4 font-bold ${row.marks > 0 ? 'text-emerald-600' : row.marks < 0 ? 'text-rose-500' : 'text-neutral-300'}`}>{row.marks > 0 ? '+' : ''}{row.marks}</td>
                                                                 <td className="px-6 py-4 text-right">
-                                                                    {row.status === 'correct' && (
-                                                                        <span className="inline-flex items-center gap-1.5 text-emerald-700 text-xs font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-                                                                            <Check className="w-3 h-3" /> Correct
-                                                                        </span>
-                                                                    )}
-                                                                    {row.status === 'wrong' && (
-                                                                        <span className="inline-flex items-center gap-1.5 text-rose-600 text-xs font-bold bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
-                                                                            <X className="w-3 h-3" /> Wrong
-                                                                        </span>
-                                                                    )}
-                                                                    {row.status === 'partial' && (
-                                                                        <span className="inline-flex items-center gap-1.5 text-amber-600 text-xs font-bold bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
-                                                                            Partial
-                                                                        </span>
-                                                                    )}
+                                                                    {row.status === 'correct' && <span className="inline-flex items-center gap-1.5 text-emerald-700 text-xs font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100"><Check className="w-3 h-3" /> Correct</span>}
+                                                                    {row.status === 'wrong' && <span className="inline-flex items-center gap-1.5 text-rose-600 text-xs font-bold bg-rose-50 px-3 py-1 rounded-full border border-rose-100"><X className="w-3 h-3" /> Wrong</span>}
+                                                                    {row.status === 'partial' && <span className="inline-flex items-center gap-1.5 text-amber-600 text-xs font-bold bg-amber-50 px-3 py-1 rounded-full border border-amber-100">Partial</span>}
                                                                     {row.status === 'unattempted' && <span className="text-neutral-300 text-xs font-medium italic">Unattempted</span>}
                                                                     {row.status === 'unknown' && <span className="text-neutral-300 text-xs">No Key</span>}
                                                                 </td>
@@ -776,10 +647,7 @@ Please take your time and follow this process for every single question (1 to 57
                     </main>
 
                     <footer className="max-w-5xl mx-auto p-8 text-center mt-12 bg-white/30 backdrop-blur-md border-t border-white/40">
-                        <p className="text-neutral-400 text-xs font-medium">
-                            Unofficial Tool. Not affiliated with UCEED or IIT Bombay. <br/>
-                            <a href="https://www.reddit.com/user/ruxh_alt/" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-900 underline transition-colors">Made by @Ruxh_alt</a>
-                        </p>
+                        <p className="text-neutral-400 text-xs font-medium">Unofficial Tool. Not affiliated with UCEED or IIT Bombay. <br/> <a href="https://www.reddit.com/user/ruxh_alt/" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-900 underline transition-colors">Made by @Ruxh_alt</a></p>
                     </footer>
                 </div>
             );
